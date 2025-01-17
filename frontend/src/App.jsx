@@ -18,7 +18,7 @@ const App = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.post("http://127.0.0.1:5000/analyze", { code });
+      const response = await axios.post("/analyze", { code });
       setTokens(response.data);
     } catch (error) {
       setError("Failed to analyze code. Please try again.");
