@@ -48,7 +48,7 @@ const TokensPDF = ({ tokens }) => (
         <View style={[styles.tableRow, styles.tableHeader]}>
           <View style={styles.tableCol}>
             <Text style={styles.tableCell}>Value</Text>
-          </View>// Export button component
+          </View>
           <View style={styles.tableCol}>
             <Text style={styles.tableCell}>Type</Text>
           </View>

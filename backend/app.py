@@ -64,7 +64,6 @@ SYMBOLS = sorted([
         "Close Parenthesis": ")",
         "Open Brace": "{",
         "Close Brace": "}",
-        "Hash": "#",
         "Colon": ":",
         "Semi Colon": ";",
         "Comma": ",",
@@ -85,10 +84,12 @@ def match_string(code, pos):
     while end < len(code):
         if code[end] == quote and code[end-1] != '\\':
             string_content = code[pos + 1:end]
-            return end + 1, create_token("STRING_LITERAL", string_content, None)
+            return end + 1, create_token("STRING_LITERAL", string_content, None), None
         end += 1
     string_content = code[pos + 1:end]
-    return end, create_token("STRING_LITERAL", string_content, None)
+    error_msg = f"Unclosed string literal: {code[pos:]}"
+    return end, create_token("ERROR", string_content, None), error_msg
+
 
 def match_number(code, pos):
     end = pos   
@@ -126,27 +127,35 @@ def match_symbol(code, pos):
 
 def tokenize(code):
     tokens = []
+    errors = []
     lines = code.splitlines()
     
     for line_num, line in enumerate(lines, 1):
         indent_level = len(line) - len(line.lstrip())
         if indent_level > 0:
             tokens.append(create_token("INDENT", indent_level, line_num))
-            
-        if line.strip().startswith('#'):
-            tokens.append(create_token("COMMENT", line.strip(), line_num))
-            continue
+
             
         pos = 0
         line = line.strip()
+        
         while pos < len(line):
+            if line[pos] == '#':
+
+                comment = line[pos:].strip()
+                tokens.append(create_token("COMMENT", comment, line_num))
+                break 
+
             if line[pos].isspace():
                 pos += 1
                 continue
                 
             token = None
+            error = None
             if line[pos] in '"\'':
-                pos, token = match_string(line, pos)
+                pos, token, error = match_string(line, pos)
+                if error:
+                    errors.append({"message": error, "line": line_num})
             elif line[pos].isdigit():
                 pos, token = match_number(line, pos)
             elif line[pos].isalpha() or line[pos] == '_':
@@ -157,14 +166,15 @@ def tokenize(code):
             if token:
                 token["line"] = line_num
                 tokens.append(token)
-    return tokens
+    
+    return tokens, errors
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
     data = request.json
     code = data.get("code", "")
-    tokens = tokenize(code)
-    return jsonify(tokens)
+    tokens, errors = tokenize(code)
+    return jsonify({"tokens": tokens, "errors": errors})
 
 if __name__ == '__main__':
     app.run(debug=True)

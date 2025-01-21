@@ -12,15 +12,18 @@ export const BASE_URL = import.meta.env.MODE === "development" ? "http://127.0.0
 const App = () => {
   const [code, setCode] = useState("");
   const [tokens, setTokens] = useState([]);
+  const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleAnalyze = async () => {
     setIsLoading(true);
     setError(null);
+    setErrors([]);
     try {
       const response = await axios.post("/analyze", { code });
-      setTokens(response.data);
+      setTokens(response.data.tokens);
+      setErrors(response.data.errors);
     } catch (error) {
       setError("Failed to analyze code. Please try again.");
       console.error("Error analyzing code:", error);
@@ -92,7 +95,7 @@ const App = () => {
                   </button>
                   {tokens.length > 0 && <ExportPDFButton tokens={tokens} />}
                 </div>
-              </div>
+                </div>
             </div>
             <div className="col-md-6">
               <div className="card h-100 border-0 shadow-sm">
@@ -103,6 +106,18 @@ const App = () => {
                   {error && (
                     <div className="alert alert-danger m-3" role="alert">
                       {error}
+                    </div>
+                  )}
+                  {errors.length > 0 && (
+                    <div className="alert alert-warning m-3" role="alert">
+                      <h6 className="alert-heading">Errors Found:</h6>
+                      <ul className="mb-0">
+                        {errors.map((error, index) => (
+                          <li key={index}>
+                            Line {error.line}: {error.message}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                   <div
@@ -118,13 +133,17 @@ const App = () => {
                       tokens.map((token, index) => (
                         <div
                           key={index}
-                          className="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3"
+                          className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 ${
+                            token.type === "ERROR" ? "list-group-item-danger" : ""
+                          }`}
                         >
                           <div>
                             <span className="fw-bold text-primary">Value: </span>
                             <span className="font-monospace">{token.value}</span>
                           </div>
-                          <span className="badge bg-light text-primary border border-primary">
+                          <span className={`badge ${
+                            token.type === "ERROR" ? "bg-danger" : "bg-light text-primary border border-primary"
+                          }`}>
                             {token.type}
                           </span>
                         </div>
