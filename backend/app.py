@@ -11,8 +11,6 @@ dist_folder = os.path.join(frontend_folder, "dist")
 @app.route("/", defaults={"filename": ""})
 @app.route("/<path:filename>")
 def index(filename):
-    print(filename)
-    print(dist_folder)
     if not filename:
         filename = "index.html"
     return send_from_directory(dist_folder, filename)
@@ -20,15 +18,15 @@ def index(filename):
 KEYWORDS = {
     word: category.upper().replace(' ', '_')
     for category, words in {
-        "Built in Methods": ["print", "input"],
-        "Noise Words": ["in", "def"],
-        "Object-Oriented": ["class", "template", "new", "setup", "action", "static", "inherits", "parent", "override", "this"],
-        "Control Flow": ["if", "else", "else if", "for", "while", "break", "continue", "return", "switch"],
-        "Exception Handling": ["try", "catch", "finally", "raise"],
-        "Functionality": ["define", "import"],
-        "Memory Management": ["create", "delete"],
-        "Access Modifiers": ["public", "restricted", "private"],
-        "Reserved for Future": ["async", "await", "concurrent", "immutable", "delegate", "yield", "thread"]
+        "Built in Methods Keyword": ["print", "input"],
+        "Noise Words Keyword": ["in", "def"],
+        "Object Oriented Keyword": ["class", "template", "new", "setup", "action", "static", "inherits", "parent", "override", "this"],
+        "Control Flow Keyword": ["if", "else", "else if", "for", "while", "break", "continue", "return", "switch"],
+        "Exception Handling Keyword": ["try", "catch", "finally", "raise"],
+        "Functionality Keyword": ["define", "import"],
+        "Memory Management Keyword": ["create", "delete"],
+        "Access Modifiers Keyword": ["public", "restricted", "private"],
+        "Reserved for Future Keyword": ["async", "await", "concurrent", "immutable", "delegate", "yield", "thread"]
     }.items()
     for word in words
 }
@@ -51,8 +49,8 @@ SYMBOLS = sorted([
         "Logical Or": "||",
         "Logical And": "&&",
         "Floor Division": "//",
-        "Plus Symbol": "+",
-        "Minus Symbol": "-",
+        "Addition Operator": "+",
+        "Subtraction Operator": "-",
         "Asterisk": "*",
         "Divide": "/",
         "Modulo": "%",
@@ -90,7 +88,7 @@ def match_string(code, pos):
     return end, None
 
 def match_number(code, pos):
-    end = pos
+    end = pos   
     has_decimal = False
     while end < len(code) and (code[end].isdigit() or (code[end] == '.' and not has_decimal)):
         if code[end] == '.':

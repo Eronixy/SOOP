@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import axios from "axios";
 import CodeMirror from '@uiw/react-codemirror';
-import { javascript } from '@codemirror/lang-javascript';
+import { python } from '@codemirror/lang-python';
 import { dracula } from '@uiw/codemirror-theme-dracula';
 import "bootstrap/dist/css/bootstrap.min.css";
 import './index.css';
+import ExportPDFButton from './export';
 
 export const BASE_URL = import.meta.env.MODE === "development" ? "http://127.0.0.1:5000/api" : "/api";
 
@@ -46,7 +47,7 @@ const App = () => {
                     value={code}
                     height="400px"
                     theme={dracula}
-                    extensions={[javascript({ jsx: true })]}
+                    extensions={[python()]}
                     onChange={(value) => setCode(value)}
                     basicSetup={{
                       lineNumbers: true,
@@ -60,7 +61,6 @@ const App = () => {
                       indentOnInput: true,
                       bracketMatching: true,
                       closeBrackets: true,
-                      autocompletion: true,
                       rectangularSelection: true,
                       crosshairCursor: true,
                       highlightActiveLine: true,
@@ -90,6 +90,7 @@ const App = () => {
                       "Analyze Code"
                     )}
                   </button>
+                  {tokens.length > 0 && <ExportPDFButton tokens={tokens} />}
                 </div>
               </div>
             </div>
@@ -97,7 +98,7 @@ const App = () => {
             <div className="col-md-6">
               <div className="card h-100 border-0 shadow-sm">
                 <div className="card-header bg-primary text-white py-3">
-                  <h5 className="card-title mb-0">Tokens</h5>
+                  <h5 className="card-title mb-0">Lexemes</h5>
                 </div>
                 <div className="card-body p-0">
                   {error && (
