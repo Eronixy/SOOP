@@ -19,7 +19,7 @@ const App = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.post("/analyze", { code });
+      const response = await axios.post("http://127.0.0.1:5000/analyze", { code });
       setTokens(response.data);
     } catch (error) {
       setError("Failed to analyze code. Please try again.");
@@ -94,7 +94,6 @@ const App = () => {
                 </div>
               </div>
             </div>
-
             <div className="col-md-6">
               <div className="card h-100 border-0 shadow-sm">
                 <div className="card-header bg-primary text-white py-3">

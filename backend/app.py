@@ -16,20 +16,21 @@ def index(filename):
     return send_from_directory(dist_folder, filename)
 
 KEYWORDS = {
-    word: category.upper().replace(' ', '_')
+    word: f"{word.upper()}_KEYWORD"
     for category, words in {
-        "Built in Methods Keyword": ["print", "input"],
-        "Noise Words Keyword": ["in", "def"],
-        "Object Oriented Keyword": ["class", "template", "new", "setup", "action", "static", "inherits", "parent", "override", "this"],
-        "Control Flow Keyword": ["if", "else", "else if", "for", "while", "break", "continue", "return", "switch"],
-        "Exception Handling Keyword": ["try", "catch", "finally", "raise"],
-        "Functionality Keyword": ["define", "import"],
-        "Memory Management Keyword": ["create", "delete"],
-        "Access Modifiers Keyword": ["public", "restricted", "private"],
-        "Reserved for Future Keyword": ["async", "await", "concurrent", "immutable", "delegate", "yield", "thread"]
+        "Built in Methods": ["print", "input"],
+        "Noise Words": ["in", "def"],
+        "Object Oriented": ["class", "template", "new", "setup", "action", "static", "inherits", "parent", "override", "this"],
+        "Control Flow": ["if", "else", "else if", "for", "while", "break", "continue", "return", "switch"],
+        "Exception Handling": ["try", "catch", "finally", "raise"],
+        "Functionality": ["define", "import"],
+        "Memory Management": ["create", "delete"],
+        "Access Modifiers": ["public", "restricted", "private"],
+        "Reserved for Future": ["async", "await", "concurrent", "immutable", "delegate", "yield", "thread"]
     }.items()
     for word in words
 }
+
 
 SYMBOLS = sorted([
     (symbol, category.upper().replace(' ', '_'))
@@ -83,9 +84,11 @@ def match_string(code, pos):
     end = pos + 1
     while end < len(code):
         if code[end] == quote and code[end-1] != '\\':
-            return end + 1, create_token("STRING_LITERAL", code[pos:end+1], None)
+            string_content = code[pos + 1:end]
+            return end + 1, create_token("STRING_LITERAL", string_content, None)
         end += 1
-    return end, None
+    string_content = code[pos + 1:end]
+    return end, create_token("STRING_LITERAL", string_content, None)
 
 def match_number(code, pos):
     end = pos   
