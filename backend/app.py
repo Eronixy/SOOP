@@ -1,180 +1,195 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
+from datetime import datetime, timezone
+from lexical_analyzer import LexicalAnalyzer
+from syntax_analyzer import SyntaxAnalyzer
+from typing import Dict
 
+# Initialize Flask application
 app = Flask(__name__)
 CORS(app)
 
-frontend_folder = os.path.join(os.getcwd(), "..", "frontend")
-dist_folder = os.path.join(frontend_folder, "dist")
+# Configuration
+class Config:
+    # Paths
+    FRONTEND_FOLDER = os.path.join(os.getcwd(), "..", "frontend")
+    DIST_FOLDER = os.path.join(FRONTEND_FOLDER, "dist")
+    
+    # Server settings
+    DEBUG = True
+    HOST = '0.0.0.0'
+    PORT = 5000
+    
+    # Analysis settings
+    MAX_CODE_LENGTH = 1000000  # Maximum code length in characters
+    
+    # Logging
+    LOG_FOLDER = "logs"
+    LOG_FILE = f"soop_analyzer_{datetime.now().strftime('%Y%m%d')}.log"
 
+app.config.from_object(Config)
+
+# Ensure log directory exists
+if not os.path.exists(Config.LOG_FOLDER):
+    os.makedirs(Config.LOG_FOLDER)
+
+def log_analysis(code: str, result: Dict, user: str):
+    """Log analysis requests and results"""
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    log_entry = f"""
+--- Analysis Log Entry ---
+Timestamp: {timestamp}
+User: {user}
+Code Length: {len(code)} characters
+Tokens Found: {len(result.get('tokens', []))}
+Errors Found: {len(result.get('errors', []))}
+------------------------
+"""
+    log_path = os.path.join(Config.LOG_FOLDER, Config.LOG_FILE)
+    with open(log_path, 'a') as log_file:
+        log_file.write(log_entry)
+
+def connect_analyzers(code: str) -> Dict:
+    """
+    Connect lexical and syntax analyzers and process the code
+    Returns a dictionary containing tokens and errors
+    """
+    try:
+        lexical_analyzer = LexicalAnalyzer(code)
+        tokens, lexical_errors = lexical_analyzer.tokenize()
+        
+        if lexical_errors:
+            return {
+                "tokens": tokens,
+                "errors": [{
+                    "type": "Lexical Error",
+                    "line": error["line"],
+                    "message": error["message"]
+                } for error in lexical_errors],
+                "status": "error"
+            }
+        
+        syntax_analyzer = SyntaxAnalyzer(tokens)
+        syntax_errors = syntax_analyzer.analyze()
+        
+        return {
+            "tokens": tokens,
+            "errors": syntax_errors,
+            "status": "success" if not syntax_errors else "error"
+        }
+        
+    except Exception as e:
+        return {
+            "tokens": [],
+            "errors": [{
+                "type": "System Error",
+                "line": 0,
+                "message": f"Analysis failed: {str(e)}"
+            }],
+            "status": "error"
+        }
+
+# Routes
 @app.route("/", defaults={"filename": ""})
 @app.route("/<path:filename>")
-def index(filename):
+def serve_frontend(filename):
+    """Serve frontend files"""
     if not filename:
         filename = "index.html"
-    return send_from_directory(dist_folder, filename)
-
-KEYWORDS = {
-    word: f"{word.upper()}_KEYWORD"
-    for category, words in {
-        "Built in Methods": ["print", "input"],
-        "Noise Words": ["in", "def"],
-        "Object Oriented": ["class", "template", "new", "setup", "action", "static", "inherits", "parent", "override", "this"],
-        "Control Flow": ["if", "else", "else if", "for", "while", "break", "continue", "return", "switch"],
-        "Exception Handling": ["try", "catch", "finally", "raise"],
-        "Functionality": ["define", "import"],
-        "Memory Management": ["create", "delete"],
-        "Access Modifiers": ["public", "restricted", "private"],
-        "Reserved for Future": ["async", "await", "concurrent", "immutable", "delegate", "yield", "thread"]
-    }.items()
-    for word in words
-}
-
-
-SYMBOLS = sorted([
-    (symbol, category.upper().replace(' ', '_'))
-    for category, symbol in {
-        "Increment": "++",
-        "Decrement": "--",
-        "Plus Assignment": "+=",
-        "Minus Assignment": "-=",
-        "Multiply Assignment": "*=",
-        "Divide Assignment": "/=",
-        "Modulo Assignment": "%=",
-        "Floor Division Assignment": "//=",
-        "Greater Than or Equal": ">=",
-        "Less Than or Equal": "<=",
-        "Equal To": "==",
-        "Not Equal": "!=",
-        "Logical Or": "||",
-        "Logical And": "&&",
-        "Floor Division": "//",
-        "Addition Operator": "+",
-        "Subtraction Operator": "-",
-        "Asterisk": "*",
-        "Divide": "/",
-        "Modulo": "%",
-        "Caret": "^",
-        "Greater Than": ">",
-        "Less Than": "<",
-        "Logical Not": "!",
-        "Equals": "=",
-        "Open Parenthesis": "(",
-        "Close Parenthesis": ")",
-        "Open Brace": "{",
-        "Close Brace": "}",
-        "Colon": ":",
-        "Semi Colon": ";",
-        "Comma": ",",
-        "Period": ".",
-        "Double Quotes": "\""
-    }.items()
-], key=lambda x: len(x[0]), reverse=True)
-
-DATA_TYPES = {"int", "double", "float", "bool", "list", "dict", "string"}
-BOOL_VALUES = {"true", "false"}
-
-def create_token(type_name, value, line):
-    return {"type": type_name, "value": value, "line": line}
-
-def match_string(code, pos):
-    quote = code[pos]
-    end = pos + 1
-    while end < len(code):
-        if code[end] == quote and code[end-1] != '\\':
-            string_content = code[pos + 1:end]
-            return end + 1, create_token("STRING_LITERAL", string_content, None), None
-        end += 1
-    string_content = code[pos + 1:end]
-    error_msg = f"Unclosed string literal: {code[pos:]}"
-    return end, create_token("ERROR", string_content, None), error_msg
-
-
-def match_number(code, pos):
-    end = pos   
-    has_decimal = False
-    while end < len(code) and (code[end].isdigit() or (code[end] == '.' and not has_decimal)):
-        if code[end] == '.':
-            has_decimal = True
-        end += 1
-    number = code[pos:end]
-    type_name = "FLOAT_LITERAL" if '.' in number else "INTEGER_LITERAL"
-    return end, create_token(type_name, number, None)
-
-def match_identifier(code, pos):
-    end = pos
-    while end < len(code) and (code[end].isalnum() or code[end] == '_'):
-        end += 1
-    word = code[pos:end]
-    
-    if word in KEYWORDS:
-        return end, create_token(KEYWORDS[word], word, None)
-    elif word in DATA_TYPES:
-        return end, create_token("DATA_TYPE", word, None)
-    elif word in BOOL_VALUES:
-        return end, create_token("BOOLEAN_LITERAL", word, None)
-    elif word == "null":
-        return end, create_token("NULL_LITERAL", word, None)
-    else:
-        return end, create_token("IDENTIFIER", word, None)
-
-def match_symbol(code, pos):
-    for symbol, category in SYMBOLS:
-        if code[pos:].startswith(symbol):
-            return pos + len(symbol), create_token(category, symbol, None)
-    return pos + 1, create_token("UNKNOWN", code[pos], None)
-
-def tokenize(code):
-    tokens = []
-    errors = []
-    lines = code.splitlines()
-    
-    for line_num, line in enumerate(lines, 1):
-        indent_level = len(line) - len(line.lstrip())
-        if indent_level > 0:
-            tokens.append(create_token("INDENT", indent_level, line_num))
-
-            
-        pos = 0
-        line = line.strip()
-        
-        while pos < len(line):
-            if line[pos] == '#':
-
-                comment = line[pos:].strip()
-                tokens.append(create_token("COMMENT", comment, line_num))
-                break 
-
-            if line[pos].isspace():
-                pos += 1
-                continue
-                
-            token = None
-            error = None
-            if line[pos] in '"\'':
-                pos, token, error = match_string(line, pos)
-                if error:
-                    errors.append({"message": error, "line": line_num})
-            elif line[pos].isdigit():
-                pos, token = match_number(line, pos)
-            elif line[pos].isalpha() or line[pos] == '_':
-                pos, token = match_identifier(line, pos)
-            else:
-                pos, token = match_symbol(line, pos)
-                
-            if token:
-                token["line"] = line_num
-                tokens.append(token)
-    
-    return tokens, errors
+    try:
+        return send_from_directory(Config.DIST_FOLDER, filename)
+    except Exception as e:
+        return jsonify({
+            "error": "File not found",
+            "message": str(e)
+        }), 404
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.json
-    code = data.get("code", "")
-    tokens, errors = tokenize(code)
-    return jsonify({"tokens": tokens, "errors": errors})
+    """
+    Analyze SOOP code
+    Expects JSON with 'code' field containing the code to analyze
+    """
+    try:
+        # Get request data
+        data = request.get_json()
+        
+        if not data or 'code' not in data:
+            return jsonify({
+                "error": "No code provided",
+                "message": "Request must include 'code' field"
+            }), 400
+            
+        code = data['code']
+        
+        # Validate code length
+        if len(code) > Config.MAX_CODE_LENGTH:
+            return jsonify({
+                "error": "Code too long",
+                "message": f"Code exceeds maximum length of {Config.MAX_CODE_LENGTH} characters"
+            }), 400
+            
+        # Process the code
+        result = connect_analyzers(code)
+        
+        # Log the analysis
+        user = request.headers.get('X-User', 'anonymous')
+        log_analysis(code, result, user)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            "error": "Analysis failed",
+            "message": str(e),
+            "tokens": [],
+            "errors": [{
+                "type": "System Error",
+                "line": 0,
+                "message": f"Server error: {str(e)}"
+            }]
+        }), 500
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC'),
+        "version": "1.0.0"
+    })
+
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    return jsonify({
+        "error": "Not Found",
+        "message": "The requested resource was not found"
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        "error": "Internal Server Error",
+        "message": "An unexpected error occurred"
+    }), 500
+
+# Main entry point
 if __name__ == '__main__':
-    app.run(debug=True)
+    print(f"""
+SOOP Language Analyzer Server
+----------------------------
+Version: 1.0.0
+Started at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}
+Debug Mode: {Config.DEBUG}
+Frontend Path: {Config.DIST_FOLDER}
+Logs Path: {os.path.join(Config.LOG_FOLDER, Config.LOG_FILE)}
+----------------------------
+    """)
+    
+    app.run(
+        host=Config.HOST,
+        port=Config.PORT,
+        debug=Config.DEBUG
+    )
