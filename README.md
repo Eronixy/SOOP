@@ -4,7 +4,7 @@
 SOOP is an enhanced version of the Java programming language, designed with a Python-like syntax to improve readability, simplify programming for beginners, and provide a shorter, more concise syntax for developers. It aims to make object-oriented programming (OOP) more comprehensible by minimizing repetitive constructs and increasing productivity.
 
 ## Technology Stack
-SOOP is built with:
+SOOP Analyzer is built with:
 - Vite + React frontend
 - Flask backend
 
