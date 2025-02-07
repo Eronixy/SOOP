@@ -1,12 +1,18 @@
 # SOOP - Focus more, code less.
 
 ## Introduction
-SOOP is an enhanced version of the Java programming language, designed with a Python-like syntax to improve readability, simplify programming for beginners, and provide a shorter, more concise syntax for developers. It aims to make object-oriented programming (OOP) more comprehensible by minimizing repetitive constructs and increasing productivity.
+SOOP is an enhanced version of the Java programming language, designed with a Python-like syntax to improve readability, simplify programming for beginners, and provide a shorter, more concise syntax.
 
 ## Technology Stack
 SOOP Analyzer is built with:
 - Vite + React frontend
 - Flask backend
+
+## Features
+- Python-like syntax for Java programming
+- Improved readability and simplicity
+- Vite + React frontend for fast and efficient UI development
+- Flask backend for robust and scalable server-side processing
 
 ## Repository Structure
 - `backend/`: Contains the backend implementation in Python.
@@ -19,7 +25,6 @@ SOOP Analyzer is built with:
 
 ## Installation
 ### Clone the repository:
-
 ```
 git clone https://github.com/Eronixy/SOOP.git
 cd SOOP
@@ -83,6 +88,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Flask](https://flask.palletsprojects.com/)
 - [React](https://reactjs.org/)
 - [Vite](https://vitejs.dev/)
-```
-
-You can create this README file directly [here](https://github.com/Eronixy/SOOP/new/main?filename=README.md).
